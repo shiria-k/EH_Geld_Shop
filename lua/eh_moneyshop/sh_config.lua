@@ -9,6 +9,16 @@ EHMoneyShop.Config.StartMoney = 500
 EHMoneyShop.Config.ChatPrefix = "[EH Geld]"
 EHMoneyShop.Config.SaveInterval = 120
 
+-- HUD-Anzeige oben rechts
+EHMoneyShop.Config.HUD = {
+    enabled = true,
+    title = "Geld",
+    posX = 20, -- Abstand von rechts
+    posY = 20, -- Abstand von oben
+    width = 210,
+    height = 58
+}
+
 EHMoneyShop.Config.MySQL = {
     host = "127.0.0.1",
     username = "root",
