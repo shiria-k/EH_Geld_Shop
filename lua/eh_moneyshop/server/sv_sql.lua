@@ -2,13 +2,52 @@ EHMoneyShop = EHMoneyShop or {}
 EHMoneyShop.SQL = EHMoneyShop.SQL or {}
 EHMoneyShop.Money = EHMoneyShop.Money or {}
 
-require("mysqloo")
-
-local cfg = EHMoneyShop.Config.MySQL
-local db
-
 local function log(msg)
     print("[EH Geld SQL] " .. msg)
+end
+
+log("SQL-Datei wurde geladen.")
+
+local ok, err = pcall(require, "mysqloo")
+if not ok then
+    log("FEHLER: mysqloo konnte nicht geladen werden.")
+    log("Grund: " .. tostring(err))
+    log("Loesung: mysqloo muss nach garrysmod/lua/bin/ hochgeladen werden.")
+    EHMoneyShop.SQL.Disabled = true
+    return
+end
+
+log("mysqloo wurde geladen.")
+
+local cfg = EHMoneyShop.Config.MySQL or {}
+local db
+
+local function validateConfig()
+    local missing = {}
+
+    if not cfg.host or cfg.host == "" or cfg.host == "127.0.0.1" then
+        table.insert(missing, "host")
+    end
+
+    if not cfg.username or cfg.username == "" or cfg.username == "root" then
+        table.insert(missing, "username")
+    end
+
+    if not cfg.password or cfg.password == "" or cfg.password == "password" then
+        table.insert(missing, "password")
+    end
+
+    if not cfg.database or cfg.database == "" or cfg.database == "gmod_moneyshop" then
+        table.insert(missing, "database")
+    end
+
+    cfg.port = tonumber(cfg.port) or 3306
+
+    if #missing > 0 then
+        log("WARNUNG: Diese MySQL-Werte sehen noch falsch oder leer aus: " .. table.concat(missing, ", "))
+    end
+
+    log("Verbindungsversuch zu " .. tostring(cfg.host) .. ":" .. tostring(cfg.port) .. " / DB: " .. tostring(cfg.database) .. " / User: " .. tostring(cfg.username))
 end
 
 function EHMoneyShop.SQL.Escape(value)
@@ -17,6 +56,12 @@ function EHMoneyShop.SQL.Escape(value)
 end
 
 function EHMoneyShop.SQL.Query(query, callback)
+    if EHMoneyShop.SQL.Disabled then
+        log("Query blockiert, weil SQL deaktiviert ist.")
+        if callback then callback(false, "SQL deaktiviert") end
+        return
+    end
+
     if not db then
         log("Query ohne Datenbankverbindung blockiert: " .. query)
         if callback then callback(false, "Keine Datenbankverbindung") end
@@ -29,10 +74,10 @@ function EHMoneyShop.SQL.Query(query, callback)
         if callback then callback(data or {}, nil) end
     end
 
-    function q:onError(err)
-        log("Query Fehler: " .. err)
+    function q:onError(qerr)
+        log("Query Fehler: " .. tostring(qerr))
         log(query)
-        if callback then callback(false, err) end
+        if callback then callback(false, qerr) end
     end
 
     q:start()
@@ -63,7 +108,11 @@ local function createTables()
 end
 
 function EHMoneyShop.SQL.Connect()
-    db = mysqloo.connect(cfg.host, cfg.username, cfg.password, cfg.database, cfg.port)
+    if EHMoneyShop.SQL.Disabled then return end
+
+    validateConfig()
+
+    db = mysqloo.connect(tostring(cfg.host), tostring(cfg.username), tostring(cfg.password), tostring(cfg.database), tonumber(cfg.port) or 3306)
 
     function db:onConnected()
         log("Verbunden mit MySQL.")
@@ -71,8 +120,9 @@ function EHMoneyShop.SQL.Connect()
         hook.Run("EHMoneyShop.SQLReady")
     end
 
-    function db:onConnectionFailed(err)
-        log("Verbindung fehlgeschlagen: " .. err)
+    function db:onConnectionFailed(qerr)
+        log("Verbindung fehlgeschlagen: " .. tostring(qerr))
+        log("Pruefen: host, port, username, passwort, database und Connections From.")
     end
 
     db:connect()
