@@ -11,6 +11,25 @@ local function moneyText()
     return tostring(EHMoneyShop.ClientMoney or 0) .. " " .. tostring(EHMoneyShop.CurrencyName or "Coins")
 end
 
+local function drawMoneyHUD()
+    local cfg = EHMoneyShop.Config and EHMoneyShop.Config.HUD or {}
+    if cfg.enabled == false then return end
+
+    local w = cfg.width or 210
+    local h = cfg.height or 58
+    local x = ScrW() - w - (cfg.posX or 20)
+    local y = cfg.posY or 20
+    local title = cfg.title or "Geld"
+
+    draw.RoundedBox(10, x, y, w, h, Color(20, 20, 20, 210))
+    draw.RoundedBox(10, x + 4, y + 4, w - 8, h - 8, Color(35, 35, 35, 220))
+
+    draw.SimpleText(title, "DermaDefaultBold", x + 14, y + 10, Color(220, 220, 220), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText(moneyText(), "DermaLarge", x + 14, y + 26, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+end
+
+hook.Add("HUDPaint", "EHMoneyShop.DrawMoneyHUD", drawMoneyHUD)
+
 local function createShop(serverID, items, currentMoney, currency)
     EHMoneyShop.ClientMoney = currentMoney or EHMoneyShop.ClientMoney or 0
     EHMoneyShop.CurrencyName = currency or EHMoneyShop.CurrencyName or "Coins"
